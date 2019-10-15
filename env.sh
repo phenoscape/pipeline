@@ -4,7 +4,7 @@ KBOT=1.8
 DOSDP=0.13.1
 JENA=3.12.0
 BGR=1.4
-ROBOT=1.4.1
+ROBOT=1.4.3
 
 mkdir -p bin
 cd bin

@@ -4,14 +4,15 @@
 BUILD_DIR=build
 RESOURCES=resources
 SPARQL=sparql
-ROBOT_ENV=ROBOT_JAVA_ARGS=-Xmx128G
+JAVA_HEAP ?= -Xmx128G
+ROBOT_ENV=ROBOT_JAVA_ARGS=$(JAVA_HEAP)
 ROBOT=$(ROBOT_ENV) robot
-JVM_ARGS=JVM_ARGS=-Xmx128G
+JVM_ARGS=JVM_ARGS=$(JAVA_HEAP)
 ARQ=$(JVM_ARGS) arq
 RIOT=riot
 BLAZEGRAPH-RUNNER=blazegraph-runner
 
-BIO-ONTOLOGIES=ontologies.ofn
+BIO_ONTOLOGIES=ontologies.ofn
 # Path to data repo; must be separately downloaded/cloned
 NEXML_DATA=phenoscape-data
 DB_FILE=$(BUILD_DIR)/blazegraph-loaded-all.jnl
@@ -99,7 +100,7 @@ $(BUILD_DIR)/phenoscape-kb-tbox-hierarchy.ttl: $(BUILD_DIR)/phenoscape-kb-tbox-c
 
 # Extract ontology metadata
 # ## Query for ontologies' version information
-$(BUILD_DIR)/ontology-metadata.ttl: $(BIO-ONTOLOGIES) $(SPARQL)/ontology-versions.sparql
+$(BUILD_DIR)/ontology-metadata.ttl: $(BIO_ONTOLOGIES) $(SPARQL)/ontology-versions.sparql
 	$(ROBOT) query \
 	--catalog $(BUILD_DIR)/mirror/catalog-v001.xml \
 	-i $< \
@@ -112,7 +113,7 @@ $(BUILD_DIR)/ontology-metadata.ttl: $(BIO-ONTOLOGIES) $(SPARQL)/ontology-version
 
 # Mirror ontologies locally
 # $(ONTOLOGIES) - list of ontologies to be imported
-$(BUILD_DIR)/mirror: $(BIO-ONTOLOGIES)
+$(BUILD_DIR)/mirror: $(BIO_ONTOLOGIES)
 	rm -rf $@ ; \
 	$(ROBOT) mirror -i $< -d $@ -o $@/catalog-v001.xml
 
@@ -134,7 +135,7 @@ $(BUILD_DIR)/phenex-data+tbox.ttl: $(BUILD_DIR)/phenex-data-merged.ofn $(BUILD_D
 # ----------
 
 # Store paths to all needed Phenex NeXML files in NEXMLS variable
-NEXMLS := $(shell mkdir -p $(BUILD_DIR)) \
+NEXMLS ?= $(shell mkdir -p $(BUILD_DIR)) \
 $(shell find $(NEXML_DATA)/curation-files/completed-phenex-files -type f -name "*.xml") \
 $(shell find $(NEXML_DATA)/curation-files/fin_limb-incomplete-files -type f -name "*.xml") \
 $(shell find $(NEXML_DATA)/curation-files/Jackson_Dissertation_Files -type f -name "*.xml") \
@@ -143,7 +144,7 @@ $(shell find $(NEXML_DATA)/curation-files/teleost-incomplete-files/Miniatures_Ma
 $(shell find $(NEXML_DATA)/curation-files/matrix-vs-monograph -type f -name "*.xml")
 
 # Store paths to all OFN files which will be produced from NeXML files in NEXML_OWLS variable
-NEXML_OWLS := $(patsubst %.xml, %.ofn, $(patsubst $(NEXML_DATA)/%, $(BUILD_DIR)/phenex-data-owl/%, $(NEXMLS)))
+NEXML_OWLS ?= $(patsubst %.xml, %.ofn, $(patsubst $(NEXML_DATA)/%, $(BUILD_DIR)/phenex-data-owl/%, $(NEXMLS)))
 
 # Convert a single NeXML file to its counterpart OFN
 $(BUILD_DIR)/phenex-data-owl/%.ofn: $(NEXML_DATA)/%.xml $(BUILD_DIR)/bio-ontologies-merged.ttl
@@ -156,6 +157,7 @@ $(BUILD_DIR)/phenex-data-owl/%.ofn: $(NEXML_DATA)/%.xml $(BUILD_DIR)/bio-ontolog
 
 # Merge all Phenex NeXML OFN files into a single ontology of phenotype annotations
 $(BUILD_DIR)/phenex-data-merged.ofn: $(NEXML_OWLS)
+
 	$(ROBOT) merge $(addprefix -i , $(NEXML_OWLS)) \
 	convert --format ofn \
 	-o $@.tmp \
